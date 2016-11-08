@@ -1,4 +1,4 @@
-package grokking.data.streamming
+package grokking.data.streaming
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.SaveMode
@@ -8,13 +8,13 @@ import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.SparkContext
 
-object TestStreamming {
+object TestStreaming {
 
     def main(args: Array[String]){
         
         val spark = SparkSession.builder
         .master("yarn")
-        .appName("spark-streamming-demo")
+        .appName("spark-streaming-demo")
         .enableHiveSupport()
         .getOrCreate()
         import spark.implicits._
@@ -22,17 +22,15 @@ object TestStreamming {
         val sc = spark.sparkContext
         val ssc = new StreamingContext(sc, Seconds(2))
 
-        //spark.readStream.
         val kafkaStream = KafkaUtils.createStream(
                 ssc, 
-                "s2:2181",
+                "s2:2181,s1:2181",
                 "spark-streaming-consumer-group",
                 Map("page-views" -> 2)
         )
         val sqlContext = spark.sqlContext
         import sqlContext.implicits._
             
-        //kafkaStream.map(line => (line._1, line._2))
         kafkaStream.foreachRDD(rdd => {
             
             if(rdd.count > 0){
