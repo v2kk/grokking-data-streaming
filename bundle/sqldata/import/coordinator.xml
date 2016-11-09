@@ -1,0 +1,97 @@
+<coordinator-app name="GROKKING :: SPARK :: ${product} - ${type}" frequency="${coord:days(1)}"
+        start="${startDate}" end="${endDate}"
+        timezone="${coordTimeZone}"
+        xmlns="uri:oozie:coordinator:0.4"
+        xmlns:sla="uri:oozie:sla:0.2">
+
+    <controls>
+        <timeout>${coordTimeout}</timeout>
+        <concurrency>${coordConcurrency}</concurrency>
+    </controls>
+
+    <!-- <datasets>
+        <dataset name="login" frequency="${coord:days(1)}" initial-instance="${startDate}" timezone="${coordTimeZone}">
+            <uri-template>${hdfsLogDir}/${gameCode}/${loginName}/${YEAR}-${MONTH}-${DAY}</uri-template>
+            <done-flag>${doneFlag}</done-flag>
+        </dataset>
+        <dataset name="logout" frequency="${coord:days(1)}" initial-instance="${startDate}" timezone="${coordTimeZone}">
+            <uri-template>${hdfsLogDir}/${gameCode}/${logoutName}/${YEAR}-${MONTH}-${DAY}</uri-template>
+            <done-flag>${doneFlag}</done-flag>
+        </dataset>
+        <dataset name="payment" frequency="${coord:days(1)}" initial-instance="${startDate}" timezone="${coordTimeZone}">
+            <uri-template>${hdfsLogDir}/${gameCode}/${paymentName}/${YEAR}-${MONTH}-${DAY}</uri-template>
+            <done-flag>${doneFlag}</done-flag>
+        </dataset>
+        <dataset name="ccu" frequency="${coord:days(1)}" initial-instance="${startDate}" timezone="${coordTimeZone}">
+            <uri-template>${hdfsLogDir}/${gameCode}/${ccuName}/${YEAR}-${MONTH}-${DAY}</uri-template>
+            <done-flag>${doneFlag}</done-flag>
+        </dataset>
+        <dataset name="roleRegister" frequency="${coord:days(1)}" initial-instance="${startDate}" timezone="${coordTimeZone}">
+            <uri-template>${hdfsLogDir}/${gameCode}/${roleRegisterName}/${YEAR}-${MONTH}-${DAY}</uri-template>
+            <done-flag>${doneFlag}</done-flag>
+        </dataset>
+        
+        <dataset name="totalLogin" frequency="${coord:days(1)}" initial-instance="${startDate}" timezone="${coordTimeZone}">
+            <uri-template>${hdfsLogDir}/${gameCode}/ub/data/total_login_acc_2/${YEAR}-${MONTH}-${DAY}</uri-template>
+            <done-flag>${doneFlag}</done-flag>
+        </dataset>
+        <dataset name="totalPaid" frequency="${coord:days(1)}" initial-instance="${startDate}" timezone="${coordTimeZone}">
+            <uri-template>${hdfsLogDir}/${gameCode}/ub/data/total_paid_acc_2/${YEAR}-${MONTH}-${DAY}</uri-template>
+            <done-flag>${doneFlag}</done-flag>
+        </dataset>
+    </datasets>
+
+    <input-events>
+        <data-in name="loginEvent" dataset="login">
+            <start-instance>${coord:current(-1)}</start-instance>
+            <end-instance>${coord:current(0)}</end-instance>
+        </data-in>
+        <data-in name="logoutEvent" dataset="logout">
+            <start-instance>${coord:current(-1)}</start-instance>
+            <end-instance>${coord:current(0)}</end-instance>
+        </data-in>
+        <data-in name="paymentEvent" dataset="payment">
+            <start-instance>${coord:current(-1)}</start-instance>
+            <end-instance>${coord:current(0)}</end-instance>
+        </data-in>
+        <data-in name="ccuEvent" dataset="ccu">
+            <start-instance>${coord:current(-1)}</start-instance>
+            <end-instance>${coord:current(0)}</end-instance>
+        </data-in>
+        <data-in name="roleRegisterEvent" dataset="roleRegister">
+            <start-instance>${coord:current(-1)}</start-instance>
+            <end-instance>${coord:current(0)}</end-instance>
+        </data-in>
+        <data-in name="totalLoginEvent" dataset="totalLogin">
+            <instance>${coord:current(-1)}</instance>
+        </data-in>
+        <data-in name="totalPaidEvent" dataset="totalPaid">
+            <instance>${coord:current(-1)}</instance>
+        </data-in>
+    </input-events> -->
+
+    <action>
+        <workflow>
+            <app-path>${bundleApplicationPath}/workflow.xml</app-path>
+            <configuration>
+                <property>
+                    <name>logDate</name>
+                    <value>${coord:formatTime(coord:dateOffset(coord:nominalTime(), 0, 'DAY'), "yyyy-MM-dd")}</value>
+                </property>
+                <property>
+                    <name>nominalTime</name>
+                    <value>${coord:nominalTime()}</value>
+                </property>
+            </configuration>
+        </workflow>
+        <sla:info>
+	        <sla:nominal-time>${coord:nominalTime()}</sla:nominal-time>
+	        <sla:should-start>${2 * MINUTES}</sla:should-start>
+	        <sla:should-end>${10 * MINUTES}</sla:should-end>
+	        <sla:max-duration>${10 * MINUTES}</sla:max-duration>
+	        <sla:alert-events>start_miss,end_miss,duration_miss</sla:alert-events>
+	        <sla:alert-contact>vinhdangphuc@gmail.com</sla:alert-contact>
+		</sla:info>
+    </action>
+</coordinator-app>
+

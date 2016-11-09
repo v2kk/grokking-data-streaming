@@ -1,0 +1,57 @@
+<workflow-app name="GROKKING :: SPARK :: ${product} - ${type} - ${logDate}" xmlns="uri:oozie:workflow:0.5" xmlns:sla="uri:oozie:sla:0.2">
+    <global>
+        <job-tracker>${jobTracker}</job-tracker>
+        <name-node>${nameNode}</name-node>
+        
+        <configuration>
+            <property><name>mapreduce.job.queuename</name><value>production</value></property>
+            <property><name>oozie.launcher.mapred.job.queue.name</name><value>interactive</value></property>
+            
+            <property>
+                <name>oozie.launcher.mapreduce.map.memory.mb</name>
+                <value>384</value>
+            </property>
+            <property>
+                <name>oozie.launcher.mapreduce.map.java.opts</name>
+                <value>-Xmx346m</value>
+            </property>
+            <property>
+                <name>oozie.launcher.yarn.app.mapreduce.am.resource.mb</name>
+                <value>256</value>
+            </property>
+            <property>
+                <name>oozie.launcher.yarn.app.mapreduce.am.command-opts</name>
+                <value>-Xmx204m</value>
+            </property>
+        </configuration>
+    </global>
+    <start to="start-demo" />
+    <action name="start-demo">
+       <spark xmlns="uri:oozie:spark-action:0.1">
+	       <job-tracker>${jobTracker}</job-tracker>
+	       <name-node>${nameNode}</name-node>
+		   <master>yarn</master>
+		   <mode>cluster</mode>
+	       <name>spark-${product}-${type}-${logDate}</name>
+           <class>${sparkClass}</class>
+           <jar>${nameNode}${bundleApplicationPath}/lib/${sparkJarName}</jar>
+           <spark-opts>${sparkOpts}</spark-opts>
+           <arg>logDate=${logDate}</arg>
+        </spark>
+        <ok to="end"/>
+        <error to="kill"/>
+    </action>
+	
+    <kill name="kill">
+        <message>GROKKING :: SPARK :: ${product} - ${type} - workflow fail</message>
+    </kill>
+    <end name="end"/>
+    <sla:info>
+        <sla:nominal-time>${nominalTime}</sla:nominal-time>
+        <sla:should-start>${2 * MINUTES}</sla:should-start>
+        <sla:should-end>${10 * MINUTES}</sla:should-end>
+        <sla:max-duration>${10 * MINUTES}</sla:max-duration>
+        <sla:alert-events>start_miss,end_miss,duration_miss</sla:alert-events>
+        <!-- <sla:alert-contact>${alertContacts}</sla:alert-contact> -->
+	</sla:info>
+</workflow-app>

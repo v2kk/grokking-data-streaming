@@ -1,0 +1,98 @@
+<project name="Grokking-Data" default="sbt-compile" basedir=".">
+	<!-- mostly from: http://www.scala-lang.org/node/98 -->
+	<property name="src.dir" value="src" />
+	<property name="lib.dir" value="lib" />
+	<property name="build.dir" value="build" />
+	<property name="build.lib.dir" value="${build.dir}/lib" />
+	<property name="target.dir" value="target" />
+	<property name="classes.dir" value="${build.dir}/classes" />
+	<property name="main-class" value="org.grokking.data.streaming.storage.PostgresqlStorage" />
+	<property name="jar-name" value="grokking-data-streaming" />
+	
+	<property name="src.conf" value="conf" />
+	
+	<!-- set scala.home -->
+	<property environment="env" />
+	<property name="scala.home" value="${env.SCALA_HOME}" />
+	<target name="init">
+		<property name="scala-library.jar" value="${scala.home}/lib/scala-library.jar" />
+		<property name="scala-compiler.jar" value="${scala.home}/lib/scala-compiler.jar" />
+		<property name="scala.reflect" value="${scala.home}/lib/scala-reflect.jar" />
+		<path id="build.classpath">
+			<pathelement location="${scala-library.jar}" />
+			<pathelement location="${build.dir}" />
+		</path>
+		<taskdef resource="scala/tools/ant/antlib.xml">
+			<classpath>
+				<pathelement location="${scala-compiler.jar}" />
+				<pathelement location="${scala-library.jar}" />
+				<pathelement location="${scala.reflect}" />
+			</classpath>
+		</taskdef>
+	</target>
+	<target name="clean">
+		<delete dir="${classes.dir}" failonerror="false" />
+		<delete dir="${build.lib.dir}" failonerror="false" />
+		<delete dir="${build.dir}" failonerror="false" />
+		<delete dir="${target.dir}" failonerror="false" />
+		<mkdir dir="${build.dir}" />
+	</target>
+	<target name="sbt-compile" depends="clean">
+		<exec dir="." executable="/usr/bin/sbt">
+			<arg line="package" />
+		</exec>
+	</target>
+	<target name="sbt-assembly" depends="clean">
+		<exec dir="." executable="/usr/bin/sbt">
+			<arg line="assembly" />
+		</exec>
+	</target>
+	<target name="copy">
+		<property name="grokking-bundle" value="stackops@61.28.227.198:/home/stackops/grokking/bundle" />
+		<property name="local-bundle" value="bundle" />
+		<property name="grokking-dir" value="/home/stackops/grokking/bundle" />
+		
+		<sshexec host="61.28.227.198" port="234" trust="true" username="stackops" keyfile="${user.home}/.ssh/id_rsa" command="mkdir -p ${grokking-dir}/${product}/${type}/lib"/>
+		
+		<scp verbose="yes" port="234" trust="true" todir="${grokking-bundle}/${product}/${type}" keyfile="${user.home}/.ssh/id_rsa" passphrase="${pass}">
+			<fileset dir="${local-bundle}/${product}/${type}"/>
+		</scp>
+		
+		<scp verbose="yes" port="234" trust="true" todir="${grokking-bundle}/${product}/${type}/lib" keyfile="${user.home}/.ssh/id_rsa" passphrase="${pass}">
+			<fileset dir="${target.dir}/scala-2.11/">
+				<include name="${jar-name}.jar" />
+			</fileset>
+		</scp>
+		
+		<sshexec host="61.28.227.198" port="234" trust="true" username="stackops" keyfile="${user.home}/.ssh/id_rsa"
+									command="hdfs dfs -mkdir -p /user/stackops/grokking/bundle/${product}"/>
+		
+		<sshexec host="61.28.227.198" port="234" trust="true" username="stackops" keyfile="${user.home}/.ssh/id_rsa"
+					command="hdfs dfs -put -f /home/stackops/grokking/bundle/${product}/${type} /user/stackops/grokking/bundle/${product}/"/>
+	</target>
+	
+	<!-- ANT REBUILD & COPY TO ZDEPLOY & PUT TO HDFS-->
+	<target name="recopy" depends="sbt-assembly">
+		<property name="grokking-bundle" value="stackops@61.28.227.198:/home/stackops/grokking/bundle" />
+		<property name="local-bundle" value="bundle" />
+		<property name="grokking-dir" value="/home/stackops/grokking/bundle" />
+		
+		<sshexec host="61.28.227.198" port="234" trust="true" username="stackops" keyfile="${user.home}/.ssh/id_rsa" command="mkdir -p ${grokking-dir}/${product}/${type}/lib"/>
+		
+		<scp verbose="yes" port="234" trust="true" todir="${grokking-bundle}/${product}/${type}" keyfile="${user.home}/.ssh/id_rsa" passphrase="${pass}">
+			<fileset dir="${local-bundle}/${product}/${type}"/>
+		</scp>
+		
+		<scp verbose="yes" port="234" trust="true" todir="${grokking-bundle}/${product}/${type}/lib" keyfile="${user.home}/.ssh/id_rsa" passphrase="${pass}">
+			<fileset dir="${target.dir}/scala-2.11/">
+				<include name="${jar-name}.jar" />
+			</fileset>
+		</scp>
+		
+		<sshexec host="61.28.227.198" port="234" trust="true" username="stackops" keyfile="${user.home}/.ssh/id_rsa"
+							command="hdfs dfs -mkdir -p /user/stackops/grokking/bundle/${product}"/>
+		
+		<sshexec host="61.28.227.198" port="234" trust="true" username="stackops" keyfile="${user.home}/.ssh/id_rsa"
+					command="hdfs dfs -put -f /home/stackops/grokking/bundle/${product}/${type} /user/stackops/grokking/bundle/${product}/"/>
+	</target>
+</project>
