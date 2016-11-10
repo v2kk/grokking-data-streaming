@@ -9,6 +9,8 @@ import org.apache.spark.sql.SaveMode
 import java.util.Properties
 import org.apache.spark.sql.Row
 import org.apache.spark.streaming.Seconds
+import grokking.data.utils.DateTimeUtils
+import java.sql.Timestamp
 
 object PostgresqlStorage {
 
@@ -39,19 +41,34 @@ object PostgresqlStorage {
                 val sqlContext = spark.sqlContext
                 import sqlContext.implicits._
                 
-                val schema = StructType(Array(StructField("log",StringType,true)))
-                val storeDF = spark.createDataFrame(rdd.map(line => Row(line._2)), schema)
+                val schema = 
+                    StructType(
+                        Array(
+                            StructField("metric", StringType, true),
+                            StructField("log_date", TimestampType, true),
+                            StructField("data", StringType, true)
+                        )
+                    )
+                /*val seq = Seq(("page-views", new Timestamp(1478776892638L), "{\"metric\":\"page-views\",\"username\":\"vinhdp\",\"timestamp\":\"1478776892638\"}"),
+                        ("page-views", new Timestamp(1478776892638L), "{\"metric\":\"page-views\",\"username\":\"vinhdp\",\"timestamp\":\"1478776892638\"}"))
+                var df = seq.toDF("metric", "log_date", "data")*/
+                
+                val logDF = spark.createDataFrame(rdd.map{
+                    
+                    line => 
+                        Row(metric, new Timestamp(line._1.toLong), line._2)
+                }, schema)
                 
                 val prop = new Properties() 
                 prop.put("user", "stackops")
                 prop.put("password", "stpg@team2")
                 prop.put("driver", "org.postgresql.Driver")
                 
-                storeDF.write.mode(SaveMode.Append).jdbc("jdbc:postgresql://s2:5432/svcdb", "logs", prop)
+                logDF.write.mode(SaveMode.Append).jdbc("jdbc:postgresql://s2:5432/svcdb?stringtype=unspecified", "logs", prop)
                 /* end write */
             }
         })
-        
+            
         // Start Spark Streaming process
         ssc.start()
         ssc.awaitTermination()
