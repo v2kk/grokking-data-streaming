@@ -20,13 +20,14 @@ object PostgresqlStorage {
     def main(args: Array[String]){
         
         val metric = args(0)
+        val seconds = args(1)
         
         val spark = {
             SparkSession.builder.master("yarn").appName(appName)
             .enableHiveSupport().getOrCreate()
         }
 
-        val ssc = new StreamingContext(spark.sparkContext, Seconds(10))
+        val ssc = new StreamingContext(spark.sparkContext, Seconds(seconds.toInt))
         
         val kafkaStream = KafkaUtils.createStream(
                 ssc, "s2:2181,s1:2181",
@@ -64,7 +65,7 @@ object PostgresqlStorage {
                 prop.put("password", "stpg@team2")
                 prop.put("driver", "org.postgresql.Driver")
                 
-                logDF.write.mode(SaveMode.Append).jdbc("jdbc:postgresql://s2:5432/svcdb?stringtype=unspecified", "logs", prop)
+                logDF.write.mode(SaveMode.Append).jdbc("jdbc:postgresql://s2:5432/svcdb?stringtype=unspecified", "log_event", prop)
                 /* end write */
             }
         })

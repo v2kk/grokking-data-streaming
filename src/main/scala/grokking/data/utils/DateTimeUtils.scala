@@ -7,9 +7,26 @@ object DateTimeUtils {
 
     def formatDateTime(milis: Long): String = {
         
-        var date = ""
         val format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-        date = format.format(new Date(milis))
-        date
+        format.format(new Date(milis))
+    }
+    
+    def format(milis: Long, pattern: String): String = {
+
+        val format = new SimpleDateFormat(pattern)
+        format.format(new Date(milis))
+    }
+    
+    def format(timestamp: String, pattern: String): String = {
+
+        val milis = timestamp.toLong
+        val format = new SimpleDateFormat(pattern)
+        format.format(new Date(milis))
+    }
+    
+    def main(args: Array[String]) {
+        
+        val string = format(1479479682805L, "yyyyMMddHHmm");
+        println(string)
     }
 }
