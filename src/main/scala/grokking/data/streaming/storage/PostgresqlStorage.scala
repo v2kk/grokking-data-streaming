@@ -11,16 +11,24 @@ import org.apache.spark.sql.Row
 import org.apache.spark.streaming.Seconds
 import grokking.data.utils.DateTimeUtils
 import java.sql.Timestamp
+import org.apache.spark.streaming.dstream.DStream
 
 object PostgresqlStorage {
 
     // run every hour
     private val appName = "PostgresqlStorage"
     
+    def createKafkaStream(ssc: StreamingContext, kafkaTopic: String): DStream[(String, String)] = {
+        
+        KafkaUtils.createStream(
+                ssc, "s2:2181,s1:2181",
+                "group", Map(kafkaTopic -> 2)
+        )
+    }
+    
     def main(args: Array[String]){
         
-        val metric = args(0)
-        val seconds = args(1)
+        val seconds = args(0)
         
         val spark = {
             SparkSession.builder.master("yarn").appName(appName)
@@ -29,45 +37,73 @@ object PostgresqlStorage {
 
         val ssc = new StreamingContext(spark.sparkContext, Seconds(seconds.toInt))
         
-        val kafkaStream = KafkaUtils.createStream(
-                ssc, "s2:2181,s1:2181",
-                "group", Map(metric -> 2)
-        )
+        // set runtime configuration
+        spark.conf.set("spark.streaming.concurrentJobs", "5")
         
-        kafkaStream.foreachRDD(rdd => {
+        val pageviewStream = createKafkaStream(ssc, "production-pageview")
+        val clickStream = createKafkaStream(ssc, "production-click")
+        val orderStream = createKafkaStream(ssc, "production-order")
+        
+        val sqlContext = spark.sqlContext
+        import sqlContext.implicits._
+                
+        val schema = 
+            StructType(
+                Array(
+                    StructField("metric", StringType, true),
+                    StructField("log_date", TimestampType, true),
+                    StructField("data", StringType, true)
+            )
+        )
             
-            if(rdd.count > 0){
+        // calculate page views and video views
+        pageviewStream.foreachRDD(rdd => {
+          
+            val logDF = spark.createDataFrame(rdd.map{
                 
-                /* write to postgres */
-                val sqlContext = spark.sqlContext
-                import sqlContext.implicits._
+                event => 
+                    Row("pageview", new Timestamp(event._1.toLong), event._2)
+            }, schema)
+            
+            val prop = new Properties() 
+            prop.put("user", "stackops")
+            prop.put("password", "stpg@team2")
+            prop.put("driver", "org.postgresql.Driver")
+            
+            logDF.write.mode(SaveMode.Append).jdbc("jdbc:postgresql://s2:5432/svcdb?stringtype=unspecified", "log_event", prop)
+        })
+        
+        clickStream.foreachRDD(rdd => {
+          
+            val logDF = spark.createDataFrame(rdd.map{
                 
-                val schema = 
-                    StructType(
-                        Array(
-                            StructField("metric", StringType, true),
-                            StructField("log_date", TimestampType, true),
-                            StructField("data", StringType, true)
-                        )
-                    )
-                /*val seq = Seq(("page-views", new Timestamp(1478776892638L), "{\"metric\":\"page-views\",\"username\":\"vinhdp\",\"timestamp\":\"1478776892638\"}"),
-                        ("page-views", new Timestamp(1478776892638L), "{\"metric\":\"page-views\",\"username\":\"vinhdp\",\"timestamp\":\"1478776892638\"}"))
-                var df = seq.toDF("metric", "log_date", "data")*/
+                line => 
+                    Row("click", new Timestamp(line._1.toLong), line._2)
+            }, schema)
+            
+            val prop = new Properties() 
+            prop.put("user", "stackops")
+            prop.put("password", "stpg@team2")
+            prop.put("driver", "org.postgresql.Driver")
+            
+            logDF.write.mode(SaveMode.Append).jdbc("jdbc:postgresql://s2:5432/svcdb?stringtype=unspecified", "log_event", prop)
+        
+        })
+        
+        orderStream.foreachRDD(rdd => {
+          
+            val logDF = spark.createDataFrame(rdd.map{
                 
-                val logDF = spark.createDataFrame(rdd.map{
-                    
-                    line => 
-                        Row(metric, new Timestamp(line._1.toLong), line._2)
-                }, schema)
-                
-                val prop = new Properties() 
-                prop.put("user", "stackops")
-                prop.put("password", "stpg@team2")
-                prop.put("driver", "org.postgresql.Driver")
-                
-                logDF.write.mode(SaveMode.Append).jdbc("jdbc:postgresql://s2:5432/svcdb?stringtype=unspecified", "log_event", prop)
-                /* end write */
-            }
+                event => 
+                    Row("order", new Timestamp(event._1.toLong), event._2)
+            }, schema)
+            
+            val prop = new Properties() 
+            prop.put("user", "stackops")
+            prop.put("password", "stpg@team2")
+            prop.put("driver", "org.postgresql.Driver")
+            
+            logDF.write.mode(SaveMode.Append).jdbc("jdbc:postgresql://s2:5432/svcdb?stringtype=unspecified", "log_event", prop)
         })
             
         // Start Spark Streaming process

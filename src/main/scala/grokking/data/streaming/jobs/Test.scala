@@ -3,12 +3,15 @@ package grokking.data.streaming.jobs
 import scala.util.Random
 import org.apache.spark.sql.SparkSession
 import net.liftweb.json._
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig
+import redis.clients.jedis.JedisPool
+import grokking.data.utils.DateTimeUtils
 
 object Test {
 
     def main(args: Array[String]) {
         
-        val metrics = Seq("video_play", "login", "buy")
+        /*val metrics = Seq("video_play", "login", "buy")
         val devices = Seq("Samsung", "iPhone", "nokia", "motorola", "Sharp", "apple", "sony", "lumia")
         val ips = Seq("207.133.165.175", "66.37.216.225", "62.22.133.75", "106.230.28.62", "17.4.119.71")
         val hosts = Seq("vnexpress.vn", "tuoitre.vn", "java.com", "apache.org", "vinaclips.com", "zing.vn")
@@ -49,13 +52,29 @@ object Test {
         println("TEST: map")
         val count = rdd.map(line => {
             
-            /*val redis = new RedisClient("s2", 6379)
+            val redis = new RedisClient("s2", 6379)
             println("TEST: " + line._1)
-            redis.zincrby("pageview", 1, "201611221122")*/
+            redis.zincrby("pageview", 1, "201611221122")
             line._1
         }).toDF.count()
         
         println("TEST: end " + count)
-        spark.stop()
+        spark.stop()*/
+        
+        val redisHost = "61.28.227.198"
+        val redisPort = 6379
+        val redisTimeout = 30000
+        lazy val pool = new JedisPool(new GenericObjectPoolConfig(), redisHost, redisPort, redisTimeout)
+        val jedis = pool.getResource
+        
+        var endTime = (System.currentTimeMillis() - 60000).toString()
+        println(endTime)
+        //jedis.zremrangeByScore("activeusers", "-inf", endTime)
+        
+        val processTime = System.currentTimeMillis();
+        endTime = (processTime - 120000).toString()    // delete after 2 minutes
+        val minutes = DateTimeUtils.format(endTime, "yyyyMMddHHmm")
+        jedis.zremrangeByLex("videoviews", "[197001010000", "[" + minutes)
+        pool.returnResource(jedis)
     }
 }
