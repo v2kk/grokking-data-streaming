@@ -1,0 +1,5 @@
+Setup Crontab:
+
+0 * * * * cd ~/vinhdp && sh synch.sh order >> logs/order.$(date +"\%Y-\%m-\%d_\%H\%M").log 2>&1 &
+0 * * * * cd ~/vinhdp && sh synch.sh click >> logs/click.$(date +"\%Y-\%m-\%d_\%H\%M").log 2>&1 &
+0 * * * * cd ~/vinhdp && sh synch.sh pageview >> logs/pageview.$(date +"\%Y-\%m-\%d_\%H\%M").log 2>&1 &
