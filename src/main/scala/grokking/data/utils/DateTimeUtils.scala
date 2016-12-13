@@ -29,64 +29,72 @@ object DateTimeUtils {
         format.format(new Date(milis))
     }
 
-    def takeHourBefore(currentMilis: Long, num: Int): List[String] = {
+    /**
+     * Return list [num] hour before current hour inclusive
+     */
+    def takeListHourBefore(currentMilis: Long, num: Int): List[String] = {
 
         val formatter =
             DateTimeFormatter.ofPattern("yyyyMMddHH")
                 .withLocale(Locale.UK)
-                .withZone(ZoneId.of("GMT0"));
+                .withZone(ZoneId.of("Asia/Ho_Chi_Minh"));
         var start = Instant.ofEpochMilli(currentMilis)
         var results = List[String]()
         
         results ::= formatter.format(start)
-        for(i <- 1 to num){
+        for(i <- 1 to num - 1){
             start = start.minusSeconds(3600)
             results ::= formatter.format(start)
         }
         results
     }
     
-    def takeMinuteBefore(currentMilis: Long, num: Int): List[String] = {
+    def takeListMinuteBefore(currentMilis: Long, num: Int): List[String] = {
 
         val formatter =
             DateTimeFormatter.ofPattern("yyyyMMddHHmm")
                 .withLocale(Locale.UK)
-                .withZone(ZoneId.of("GMT0"));
+                .withZone(ZoneId.of("Asia/Ho_Chi_Minh"));
         var start = Instant.ofEpochMilli(currentMilis)
         var results = List[String]()
         
         results ::= formatter.format(start)
-        for(i <- 1 to num){
+        for(i <- 1 to num - 1){
             start = start.minusSeconds(60)
             results ::= formatter.format(start)
         }
         results
     }
     
-    def takeMinute(currentMilis: Long, num: Int): List[String] = {
+    /**
+     * Return list minute at [num] hour ago
+     */
+    def takeListMinute(currentMilis: Long, hourAgo: Int): List[String] = {
 
         val formatter =
             DateTimeFormatter.ofPattern("yyyyMMddHHmm")
                 .withLocale(Locale.UK)
-                .withZone(ZoneId.of("GMT0"));
-        var start = Instant.ofEpochMilli(currentMilis)
-        start = start.minusSeconds(num * 3600)    // minus num hour
-        val lastHour = formatter.format(start.minusSeconds((num -1) * 3600))
-        println(lastHour)
+                .withZone(ZoneId.of("Asia/Ho_Chi_Minh"));
         var results = List[String]()
-        results ::= formatter.format(start)
-        for(i <- 1 to num){
-            start = start.minusSeconds(60)
+        var start = Instant.ofEpochMilli(currentMilis)
+        start = start.minusSeconds(hourAgo * 3600)
+        var lastHour = formatter.format(start)
+        results ::= lastHour
+        
+        while( lastHour.slice(10, 12) != "59"){
+            
+            start = start.plusSeconds(60)
+            lastHour = formatter.format(start)
             results ::= formatter.format(start)
         }
+
         results
     }
 
     def main(args: Array[String]) {
 
-        val string = format(1451606400000L, "yyyyMMddHHmm");
-        println(takeHourBefore(1451606400000L, 5))
-        println(takeMinuteBefore(1451606400000L, 5))
-        println(takeMinute(1451606400000L, 5))
+        val time = System.currentTimeMillis()
+        println(takeListHourBefore(time, 5))
+        println(takeListMinute(time, 5))
     }
 }
